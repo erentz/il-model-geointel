@@ -13,16 +13,20 @@ import numpy as np
 import datetime
 
 from arcpy import env
-cap_screen_empty_dir          =   r"C:\USS\United States Solar Corporation\IL - State Level Resources\{0}\Hosting Capacity\Capacity Screen Points"
+cap_screen_empty_dir             =   r"C:\USS\United States Solar Corporation\IL - State Level Resources\{0}\Hosting Capacity\Capacity Screen Points"
 cap_screen_emptyresult_dir       =   r"C:\USS\United States Solar Corporation\IL - State Level Resources\{0}\Hosting Capacity\Capacity Screen Results"
-utility_list                = ['ComEd', 'Ameren']
+utility_list                     =   ['ComEd', 'Ameren']
 
-phi                         = "DeleteTemp"
-working_gdb                 = r'C:\US Solar\Data\State\IL\IllinoisBase.gdb'
-arcpy.env.workspace         = working_gdb
-env.overwriteOutput         = True
-cap_screen_results          =   "{0}_CapacityScreen_Results"
-cap_screen_points_mt        =   "{0}_CapacityScreenPoints"
+managed_subs_id                  =   '1YnFkLhdQg2CXHz45exypruhHT37Wy9Jf'
+production_sub_id                =   '1QeYfuTOABAmvHoqUeHIyAEVdRb4hO2Qy'
+
+phi                              =   "DeleteTemp"
+working_gdb                      =   r'C:\USS\United States Solar Corporation\Site Selection - Documents\Data\State\IL\Illinois20180313.gdb'
+arcpy.env.workspace              =   working_gdb
+env.overwriteOutput              =   True
+cap_screen_results               =   "{0}_CapacityScreen_Results"
+cap_screen_points_mt             =   "{0}_CapacityScreenPoints"
+result_table_mt                  =   "{0}_CapPointResults"
 arc_columns = [
         "Name",
         "Circuit",
@@ -80,6 +84,19 @@ fields_dict = {
             "HostingCapacity"
            ]}
 
+def DeleteExtraFields(in_table, keepfields):
+    fieldnames = []
+    fields = arcpy.ListFields(in_table)                     
+    for field in fields:
+        if not field.required:                              
+            fieldnames.append(field.name)
+    for keepfield in keepfields:
+        try:
+            fieldnames.remove(keepfield)
+        except:
+            pass                        
+    if len(fieldnames)>0:
+        arcpy.DeleteField_management(in_table, fieldnames)   
         
 def ExportDF2Arc(in_df, col_names, out_table):
     x = np.array(np.rec.fromrecords(in_df.values))
@@ -113,10 +130,10 @@ def UtilityMath(utility, in_df):
 
  
     elif utility == 'Ameren':
-  
+   
        in_df["HostingCapacity"] = (((in_df["normal_rating_of_substation_MVA"]+ in_df["feeder_min_load_MVA"])-in_df["Existing_generation_on_circuit"])/1)
        
-   
+      
         
     print in_df["HostingCapacity"]
 def ImportCapacityScreenData(utility):
@@ -159,6 +176,7 @@ def ImportCapacityScreenData(utility):
             cap_screen_xlsx.append(os.path.join(cap_screen_result_dir, file))
     # Import All Capacity Screen Result Files
     cap_screen_tables = []
+ 
     for xlsx in cap_screen_xlsx:       
         xl      = pd.ExcelFile(xlsx)
     
@@ -198,10 +216,24 @@ def ImportCapacityScreenData(utility):
   
         ExportDF2Arc(cap_df, column_list, out_table)
         cap_screen_tables.append(out_table)
-      
+    results_table = result_table_mt.format(utility)
+ 
+    arcpy.Merge_management(cap_screen_tables, results_table)
+    fieldnames = []
+    fields = arcpy.ListFields(results_table)                     
+    for field in fields:
+        if not field.required:                              
+            fieldnames.append(field.name)
+    arcpy.JoinField_management(cap_screen_points_fc, "CapScreenName", results_table, "CapScreenName")
+    DeleteExtraFields(cap_screen_points_fc, fieldnames)
     if arcpy.Exists(cap_screen_results):
         arcpy.Delete_management(cap_screen_results)
-    
+        
+    for fc in cap_screen_fc:
+        arcpy.Delete_management(fc)
+        arcpy.Delete_management(fc+phi)
+   
+    print "***ImportCapacityScreenData Finished!***"
 def Main():
     for utility in utility_list:
       
