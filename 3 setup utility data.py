@@ -224,7 +224,10 @@ def ImportCapacityScreenData(utility):
     for field in fields:
         if not field.required:                              
             fieldnames.append(field.name)
+   
     arcpy.JoinField_management(cap_screen_points_fc, "CapScreenName", results_table, "CapScreenName")
+    if utility == 'ComEd':
+        arcpy.CalculateField_management(cap_screen_points_fc, "Name", "!Circuit!", "PYTHON_9.3")
     DeleteExtraFields(cap_screen_points_fc, fieldnames)
     if arcpy.Exists(cap_screen_results):
         arcpy.Delete_management(cap_screen_results)
