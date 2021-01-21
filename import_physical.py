@@ -26,13 +26,13 @@ state_gdb               =   r'C:\USS\United States Solar Corporation\Site Select
 date_string             =   format(datetime.datetime.now().strftime('%Y%m%d'), "1")
 
 env.workspace           =   state_gdb
-scratch_space           =   r"C:\Users\ErichRentz\Downloads\VA Scratch" #adjust as necessary to an empty directory, files are managed
+scratch_space           =   r"C:\Users\malik\Downloads\Scratch" #adjust as necessary to an empty directory, files are managed
 phi                     =   "DeleteTemp"
 spatial_ref             =   2790
 contourInterval         =   10
 
-in_wetlands             =  ""
-in_flood                =  ""
+in_wetlands             =  r'C:\USS\United States Solar Corporation\Site Selection - Documents\Data\State\IL\Source\IL_geodatabase_wetlands.gdb\IL_Wetlands'
+in_flood                =  r'C:\USS\United States Solar Corporation\Site Selection - Documents\Data\State\IL\Source\NFHL_17_20201230.gdb\S_Fld_Haz_Ar'
 lc_gdb_list             = []
 
 ned_list_csv            = "ned_list.csv"
@@ -44,7 +44,7 @@ flood_modern_fc         =   'Physical\IL_FloodHazard_Modern'
 flood_unsuit_fc         =   'Physical\IL_FloodHazard_Unsuitable'
 suitable_landcover_fc   =   'Physical\IL_Suitable_LC'
 
-county_list             =   []
+county_list             =   ['Kankakee', 'Champaign', 'Tazewell', 'LaSalle', 'Grundy,' ,'Will']
 
 def ImportPhysicalData():
     arcpy.Select_analysis(in_wetlands, wetlands_fc)
