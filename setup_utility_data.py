@@ -116,12 +116,11 @@ def ImportCapacityScreenData(in_utility):
         # Format Output FC
         arcpy.CalculateField_management(output_fc+ phi, 'FolderPath', '!FolderPath!.split("/")[-1]', 'PYTHON_9.3')
         # Subset Request Points
-     #   arcpy.Select_analysis(output_fc+ phi, output_fc , 'Name <> FolderPath')
-        arcpy.Select_analysis(output_fc+ phi, output_fc )
+        arcpy.Select_analysis(output_fc+ phi, output_fc , 'Name <> FolderPath')
         # Create Final Capacity Screen Request FC
         arcpy.AddField_management(output_fc, "CapScreenName", "TEXT")
         print(output_fc)
-        arcpy.CalculateField_management(output_fc, "CapScreenName",'"!NAME!+"-"+!FolderPath!'", 'PYTHON_9.3')
+        arcpy.CalculateField_management(output_fc, "CapScreenName",'!NAME!+"-"+!FolderPath!', 'PYTHON_9.3')
         arcpy.AddField_management(output_fc, "UID", "TEXT")
         arcpy.AddField_management(output_fc, "X", "DOUBLE")
         arcpy.AddField_management(output_fc, "Y", "DOUBLE")
@@ -139,12 +138,12 @@ def ImportCapacityScreenData(in_utility):
     # Format Final Capacity Screen Request FC
     uss.delete_extra_fields(points_fc, ['UID', 'CapScreenName'])
     # Delete Intermediate
-    #for fc in cap_screen_fc:
-      #  arcpy.Delete_management(fc)
-      #  arcpy.Delete_management(fc+phi)
+    for fc in cap_screen_fc:
+        arcpy.Delete_management(fc)
+        arcpy.Delete_management(fc+phi)
 
 def Main():
-  #  ImportSpatialUtilityData()
+    ImportSpatialUtilityData()
     ImportCapacityScreenData('ComEd')
     
     ImportCapacityScreenData('Ameren')
