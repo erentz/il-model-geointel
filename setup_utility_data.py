@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jan 22 11:37:25 2021
+
+@author: malik
+"""
 
 # -*- coding: utf-8 -*-
 """
@@ -181,11 +187,11 @@ def ImportCapacityScreenData(in_utility):
             'CapScreenName': 'CapScreenName',
             'Substation' : 'Substation',
             'Circuit': 'Circuit',
-            'feeder_or_sub_number': 'Feeder',
+            'feeder_or_sub_number': 'FeederName',
             'Thermal_capacity_rating_of_feeder_or_sub':'Substation_Cap_Rating_MVA',
             'Thermal_capacity_rating_of_feeder_or_sub':'Feeder_Cap_Rating_MVA',
-            'Existing_DER_on_feeder_or_sub':'Existing_DG_MW',
-            'Pending_DER_on_feeder_or_sub':'Queue_MW',
+            'Existing_DER_on_feeder_or_sub':'ExistingGenerationMVA',
+            'Pending_DER_on_feeder_or_sub':'QueuedCapacityMW',
             'Available_capacity_on_feeder_or_sub':'Available_Sub_Cap_MW',
             'Available_capacity_on_feeder_or_sub':'Available_Feeder_Cap_MW',
             'Nominal_Voltage_at_sub': 'Distribution_Voltage_kv',
@@ -205,11 +211,11 @@ def ImportCapacityScreenData(in_utility):
             'CapScreenName': 'CapScreenName',   
             'Substation':'Substation',
             'POI_Ciruit': 'Circuit',
-            'Feeder': 'Feeder',
+            'Feeder': 'FeederName',
             'normal_rating_of_substation_MVA':'Substation_Cap_Rating_MVA',
             'normal_rating_of_POI_circuit_MVA':'Feeder_Cap_Rating_MVA',
-            'Existing_generation_on_circuit':'Existing_DG_MW',
-            'queued_generation_mW':'Queue_MW',
+            'Existing_generation_on_circuit':'ExistingGenerationMVA',
+            'queued_generation_mW':'QueuedCapacityMW',
             'available_substation_capacity_MVA':'Available_Sub_Cap_MW',
             'available_circuit_capacity_MVA':'Available_Feeder_Cap_MW',
             'substation_nominal_distribution_voltage':'Distribution_Voltage_kV',
