@@ -10,7 +10,7 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import os
 import datetime
-import ussolar.esri as uss
+#import ussolar.esri as uss
 import pandas as pd
 import numpy as np
 from arcpy import env
@@ -26,7 +26,7 @@ date_string             =   format(datetime.datetime.now().strftime('%Y%m%d'), "
 cap_screen_res_dir      =   r'C:\USS\United States Solar Corporation\IL - State Level Resources\{}\Hosting Capacity\Capacity Screen Results'
 cap_screen_points_fc    =   "UtilityData/{0}_CapacityScreenPoints"
 env.workspace           =   state_gdb
-sub_equiv               =   os.path.join(os.getcwd(), 'capscreen_substation_equiv.csv')
+
 manual_subs_kmz_id      =   '1_5mtkFe4VSPmnPanPU0XbV935NDHvE2q'
 
 
@@ -43,19 +43,23 @@ symbologyLayer          =   os.path.join(os.getcwd(), "IL_Sub_layer.lyr")
 util_dict               =   {'ComEd':'ComEd', 
                              'Ameren':'Ameren'}
 
+if_none = """def if_none(in_field, rep_val):
+  if in_field == None:
+    return rep_val
+  else:
+    return in_field"""
 
-def ExportDF2Arc(in_df, col_names, out_table):
-    x = np.array(np.rec.fromrecords(in_df.values))
-    x.dtype.names = tuple(col_names)
-    if arcpy.Exists(os.path.join(env.workspace, out_table)):
-        arcpy.Delete_management(os.path.join(env.workspace, out_table))
-    arcpy.da.NumPyArrayToTable(x, os.path.join(env.workspace, out_table))
-
+calc_field = """def calc_field(TEMP_FIELD):
+   if TEMP_FIELD:
+      return TEMP_FIELD
+   else:
+      return '-999'"""
+      
 def UploadFileByID(in_file, in_googsID, drive_obj):
     file6 = drive_obj.CreateFile({'id': in_googsID})
     file6.SetContentFile(in_file)
     file6.Upload() 
-
+    
 def GetJoinFieldNames(in_table):
     JoinFieldNames = []
     fields = arcpy.ListFields(in_table)                     
@@ -63,18 +67,14 @@ def GetJoinFieldNames(in_table):
         if str(field.name) != 'Substation' and str(field.name) != 'OBJECTID':                              
             JoinFieldNames.append(str(field.name))
     return JoinFieldNames
-
-if_none = """def if_none(in_field, rep_val):
-  if in_field == None:
-    return rep_val
-  else:
-    return in_field"""
-    
-calc_field = """def calc_field(TEMP_FIELD):
-   if TEMP_FIELD:
-      return TEMP_FIELD
-   else:
-      return '-999'"""
+###uss.FC_to_pandas(feature_class, fieldnames = None)
+### uss.delete_extra_fields(substations_fc+"_Manual", ['Name', 'UTILITY', 'COUNTY_NAME'])
+def ExportDF2Arc(in_df, col_names, out_table):
+    x = np.array(np.rec.fromrecords(in_df.values))
+    x.dtype.names = tuple(col_names)
+    if arcpy.Exists(os.path.join(env.workspace, out_table)):
+        arcpy.Delete_management(os.path.join(env.workspace, out_table))
+    arcpy.da.NumPyArrayToTable(x, os.path.join(env.workspace, out_table))
 
 def FC2Pandas(feature_class, fieldnames = None):
     if fieldnames == None:
@@ -114,6 +114,9 @@ def HostingCapacityAnalysis(utility):
     cap_req_df = cap_result_dfs[0]
     for df in cap_result_dfs[1:]:
         cap_req_df = pd.concat([cap_req_df, df])
+    # Import Queue data
+  #  queue_df = uss.FC_to_pandas(queue_table) 
+    
     # Summarize Capacity Results
     df_cap_sum = cap_req_df.groupby(["Substation", "UTILITY"], as_index=False)['HostingCapacity'].min()
     df_cap_sum2 = cap_req_df.groupby(["Substation", "UTILITY"], as_index=False)['ExistingGenerationMVA'].max()
@@ -151,7 +154,7 @@ def HostingCapacityAnalysis(utility):
     print ("***HostingCapacityAnalysis Finished!***")
     print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))   
 
-def FixSubstationNameField(in_df, in_equiv_csv):
+"""def FixSubstationNameField(in_df, in_equiv_csv):
     ##Any substations with naming join issues will be printed out in a dataframe. Check substation name in equivalency field and update manual KMZ as needed.
     sub_name_equiv =  pd.read_csv(in_equiv_csv)
     sub_name_equiv.columns = ["Substation", "Final Substation Name"]
@@ -162,65 +165,43 @@ def FixSubstationNameField(in_df, in_equiv_csv):
     in_df['Substation'] = in_df["Final Substation Name"]
     in_df = in_df.drop(['Final Substation Name'], axis=1)
     return in_df     
+def FinalizeSubstationFC():
+    df = FC2Pandas(hosting_cap_table)
+#   df = FixSubstationNameField(df, )"""
 
 def FinalizeSubstationFC():
- ###update to add target subs field
-    df = FC2Pandas(hosting_cap_table)
-    df = FixSubstationNameField(df, sub_equiv)
-    df = df.iloc[1:]
-    df = df.fillna(0)
-    df = df.drop('UTILITY', 1)
-    ExportDF2Arc(df, df.columns, "sub_name_fix")
     arcpy.Select_analysis(substations_fc+"_Manual", substations_fc)
-    hca_fields = GetJoinFieldNames(hosting_cap_table)
-    hca_fields.remove('UTILITY')
-    arcpy.JoinField_management(substations_fc, "Name", "sub_name_fix", "Substation")
-    arcpy.DeleteField_management(substations_fc, ["Substation"])
-    # Join Hosting Capacity Analysis to Substation
-    arcpy.JoinField_management(substations_fc, 
-                               "Name", 
-                               hosting_cap_table,
-                               'Substation',
-                               hca_fields)
-    for field in hca_fields:
-        print(field)
-        ###This needs to be fixed, "RuntimeError: Object: Error in executing tool" from if_none
-        if field == 'HostingCapacity' or field == 'ExistingGenerationMVA' or field == 'Tot_Avail_MW':
-            print ("this one")
-            try:
-                arcpy.CalculateField_management(substations_fc, field,'if_none( !{0}! , {1})'.format(field,'-999'),'PYTHON_9.3', if_none)
-            except:
-                pass
-        else:
-            try:
-                arcpy.CalculateField_management(substations_fc,
-                                                field,
-                                                'if_none( !{0}! , {1})'.format(field, 0),
-                                                'PYTHON_9.3',
-                                                if_none)  
-            except:
-                pass
-    ## Post to Drive
+    # Create an Exportable FC
     arcpy.Select_analysis(substations_fc, phi)
-    arcpy.AddField_management(phi, "FolderPath", "TEXT") 
-    arcpy.CalculateField_management(phi, "FolderPath", '"Distribution Substations/"' +'!COUNTY_NAME!+"/"'+"!COUNTY_NAME!", "PYTHON_9.3")
+    hca_fields = GetJoinFieldNames(hosting_cap_table)
+    arcpy.JoinField_management(substations_fc, "Name", hosting_cap_table, 'Substation', hca_fields)
+    for field in hca_fields:
+        if field =='Tot_Avail_MW' or field == 'ExistingGenerationMW' or field == 'QueuedGenerationMW' or field == 'FeederVoltagekV' or field == 'Transformer_Hosting_CapacityMW':
+            arcpy.CalculateField_management(substations_fc, field, 'if_none(!{0}!, {1})'.format(field, -999), 'PYTHON_9.3', if_none)
+        else:
+            arcpy.CalculateField_management(substations_fc,
+                                            field,
+                                            'if_none( !{0}! , {1})'.format(field, 0),
+                                            'PYTHON_9.3',
+                                            if_none)    
+    arcpy.AddField_management(substations_fc, "FolderPath", "TEXT") 
+    arcpy.CalculateField_management(substations_fc, "FolderPath", '"Distribution Substations.kmz/"' +'!COUNTY_NAME!+"/"'+"!UTILITY!", "PYTHON_9.3")
     # Make Feature Layer
-    arcpy.MakeFeatureLayer_management(phi, 'Distribution Subs')    
+    arcpy.MakeFeatureLayer_management(substations_fc, 'Distribution Subs')    
     # Apply Symbology
-    ####need to update symbology layer!
     arcpy.ApplySymbologyFromLayer_management ('Distribution Subs', symbologyLayer)
     # Export FL to KMZ
     arcpy.LayerToKML_conversion('Distribution Subs', output_net_subs_kmz)
     # Upload KMZ to Drive
-  # UploadFileByID(output_net_subs_kmz, output_subs_ID, drive)
+    UploadFileByID(output_net_subs_kmz, output_subs_ID, drive)
     # Delete Intermediate
     arcpy.Delete_management(phi)   
     arcpy.Delete_management('Distribution Subs')
- #  arcpy.Delete_management(output_net_subs_kmz)
+    arcpy.Delete_management(output_net_subs_kmz)
+    arcpy.Delete_management(substations_fc+phi+"1")
     arcpy.Delete_management(substations_fc+phi)
-    arcpy.Delete_management("sub_name_fix")
-    print( "***FinalizeSubstationFC Finished!***")
-    print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')) 
+    print("***FinalizeSubstationFC Finished!***")
+    print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 def Main():
     for util in util_dict.keys():
         HostingCapacityAnalysis(util)
@@ -230,6 +211,6 @@ try:
 except:
     gauth = GoogleAuth()
     gauth.LocalWebserverAuth()
-    drive = GoogleDrive(gauth)
-
+    drive = GoogleDrive(gauth)    
 Main()
+#arcpy.Select_analysis(substations_fc + "_Manual", substations_fc)
